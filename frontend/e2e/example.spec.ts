@@ -7,6 +7,7 @@ const lastAddedUserID = async (page: Page) => {
   const uid = testID?.split("-")[2];
   return uid;
 };
+
 const lastAddedTaskID = async (page: Page) => {
   const testID = await page
     .locator("[data-testid^=task-item]")
@@ -23,6 +24,7 @@ test.describe("Task Management System", () => {
     page = await browser.newPage();
     await page.goto("/"); // Adjust the URL as needed
   });
+  
   test.describe("User Management", () => {
     test("should add a new user", async () => {
       await page.fill('[data-testid="new-user-input"]', "John Doe");
@@ -135,10 +137,12 @@ test.describe("Task Management System", () => {
 
     test("should show error message when deleting a task fails", async () => {
       // Mock the API to return an error
-      await page.route("**/api/tasks/*", (route) => {
+      await page.route("**/tasks/*", (route) => {
         route.fulfill({
           status: 400,
-          body: JSON.stringify({ detail: "Cannot delete an assigned task" }),
+          body: JSON.stringify({
+            detail: "Cannot remove user with assigned tasks",
+          }),
         });
       });
 

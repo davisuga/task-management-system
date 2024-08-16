@@ -47,9 +47,9 @@ export const UserManagement: React.FC = () => {
   const handleRemoveUser = async (userId: number) => {
     try {
       await removeUser(userId);
-      alert(userId);
+
     } catch (res) {
-      alert(res);
+
       setSnackBarState({
         open: true,
         message: res.response.data.detail,

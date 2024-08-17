@@ -15,8 +15,6 @@ app = FastAPI()
 DATABASE_URL = "postgresql://user:password@db/taskmanagement"
 database = Database(DATABASE_URL)
 
-
-
 origins = [
     "http://localhost:5173",
 ]
@@ -85,7 +83,6 @@ async def read_tasks():
 
 @app.put("/tasks/{task_id}/assign/{user_id}")
 async def assign_task(task_id: int, user_id: int):
-    # First, check if the task and user exist
     task_query = Task.__table__.select().where(Task.id == task_id)
     task = await database.fetch_one(task_query)
     if not task:
@@ -96,7 +93,6 @@ async def assign_task(task_id: int, user_id: int):
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    # If both exist, proceed with the update
     query = (
         Task.__table__.update().where(Task.id == task_id).values(assigned_to=user_id)
     )
@@ -106,13 +102,11 @@ async def assign_task(task_id: int, user_id: int):
 
 @app.put("/tasks/{task_id}/unassign")
 async def unassign_task(task_id: int):
-    # First, check if the task exists
     task_query = Task.__table__.select().where(Task.id == task_id)
     task = await database.fetch_one(task_query)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
 
-    # If it exists, proceed with the update
     query = Task.__table__.update().where(Task.id == task_id).values(assigned_to=None)
     await database.execute(query)
     return {"message": "Task unassigned"}

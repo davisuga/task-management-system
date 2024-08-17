@@ -117,6 +117,13 @@ async def unassign_task(task_id: int):
     await database.execute(query)
     return {"message": "Task unassigned"}
 
+@app.get("/tasks/{task_id}", response_model=TaskResponse)
+async def read_task(task_id: int):
+    query = Task.__table__.select().where(Task.id == task_id)
+    task = await database.fetch_one(query)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    return task
 
 if __name__ == "__main__":
     import uvicorn

@@ -1,40 +1,27 @@
 import { test, expect, Page } from "@playwright/test";
-const lastAddedUserID = async (page: Page) => {
-  const testID = await page
-    .locator("[data-testid^=user-item]")
-    .last()
-    .getAttribute("data-testid");
-  const uid = testID?.split("-")[2];
-  return uid;
-};
 
-const lastAddedTaskID = async (page: Page) => {
-  const testID = await page
-    .locator("[data-testid^=task-item]")
-    .last()
-    .getAttribute("data-testid");
-  const uid = testID?.split("-")[2];
-  return uid;
-};
+import { assignTask, createTask, createUser } from "../src/services/api";
+const randomString = () => Math.random().toString(36).substring(2, 15);
 
 test.describe("Task Management System", () => {
   let page: Page;
 
   test.beforeEach(async ({ browser }) => {
     page = await browser.newPage();
-    await page.goto("/"); // Adjust the URL as needed
+    await page.goto("/");
   });
-  
+
   test.describe("User Management", () => {
     test("should add a new user", async () => {
-      await page.fill('[data-testid="new-user-input"]', "John Doe");
+      const name = randomString();
+      await page.fill('[data-testid="new-user-input"]', name);
+
       await page.click('[data-testid="add-user-button"]');
-      await expect(
-        page.locator(`[data-testid="user-item-${await lastAddedUserID(page)}"]`)
-      ).toContainText("John Doe");
+      await expect(page.locator(`[data-testid="user-list"]`)).toContainText(
+        name
+      );
     });
     test("should show error message when removing a user fails", async () => {
-      // Mock the API to return an error
       await page.route("**/users/*", (route) => {
         route.fulfill({
           status: 400,
@@ -44,29 +31,26 @@ test.describe("Task Management System", () => {
         });
       });
 
-      // Attempt to remove a user
       const removeButton = page
         .locator('[data-testid^="remove-user-"]:visible')
         .first();
       await removeButton.click();
 
-      // Check for error message
       await expect(page.locator(".MuiSnackbar-root")).toContainText(
         "Cannot remove user with assigned tasks"
       );
     });
-    test("should remove a user", async () => {
-      // First, add a user
-      await page.fill('[data-testid="new-user-input"]', "Jane Smith");
-      await page.click('[data-testid="add-user-button"]');
-      const uid = await lastAddedUserID(page);
 
+    test("should remove a user", async () => {
+      const name = randomString();
+      const { id } = await createUser(name);
+      page.goto("/");
       const removeButton = page
-        .locator(`[data-testid="remove-user-${uid}"]:visible`)
+        .locator(`[data-testid="remove-user-${id}"]:visible`)
         .first();
       await removeButton.click();
       await expect(
-        page.locator(`[data-testid="user-item-${uid}"]:visible`)
+        page.locator(`[data-testid="user-item-${id}"]:visible`)
       ).not.toBeVisible();
     });
   });
@@ -76,59 +60,54 @@ test.describe("Task Management System", () => {
       const randomString = Math.random().toString(36).substring(2, 15);
       await page.fill('[data-testid="new-task-input"]', randomString);
       await page.click('[data-testid="add-task-button"]');
-      await expect(page.locator(
-        `[data-testid="task-list"]`
-      )).toContainText(
+      await expect(page.locator(`[data-testid="task-list"]`)).toContainText(
         randomString
       );
     });
 
     test("should delete a task", async () => {
-      // First, add a task
-      await page.fill('[data-testid="new-task-input"]', "Delete me");
-      await page.click('[data-testid="add-task-button"]');
-      const uid = await lastAddedTaskID(page)
-      // Then, delete the task
+      const title = randomString();
+      const { id: uid } = await createTask(title);
+      page.goto("/");
       const deleteButton = page
         .locator(`[data-testid="delete-task-${uid}"]`)
         .first();
       await deleteButton.click();
-      await expect(page.locator(
-        `[data-testid="task-item-${uid}"]`
-      )).not.toBeVisible();
+      await expect(
+        page.locator(`[data-testid="task-item-${uid}"]`)
+      ).not.toBeVisible();
     });
 
     test("should assign a task to a user", async () => {
-      // First, add a user and a task
-      await page.fill('[data-testid="new-user-input"]', "Alice");
-      await page.click('[data-testid="add-user-button"]');
-      await page.fill('[data-testid="new-task-input"]', "Assigned task");
-      await page.click('[data-testid="add-task-button"]');
-      const uid = await lastAddedTaskID(page)
+      const title = randomString();
+      const name = randomString();
+      const { id: uid } = await createTask(title);
+      await createUser(name);
+      page.goto("/");
+
       page.getByTestId(`assign-task-${uid}`).getByText("Assign to").click();
-      await page.getByRole('option', { name: 'Alice' }).first().click();
-      // Then, assign the task
+      await page.getByRole("option", { name }).first().click();
 
       await expect(page.locator('[data-testid="task-list"]')).toContainText(
-        "Assigned to: Alice"
+        `Assigned to: ${name}`
       );
     });
 
     test("should unassign a task", async () => {
-      // First, add a user and an assigned task
-      await page.fill('[data-testid="new-user-input"]', "Bob");
-      await page.click('[data-testid="add-user-button"]');
-      await page.fill('[data-testid="new-task-input"]', "Unassign me");
-      await page.click('[data-testid="add-task-button"]');
-      const assignSelect = page
-        .locator('[data-testid^="assign-task-"]:visible')
-        .first();
-      await assignSelect.selectOption({ label: "Bob" });
+      const title = randomString();
+      const name = randomString();
+      const [{ id: uid }, { id: userId }] = await Promise.all([
+        createTask(title),
+        createUser(name),
+      ]);
 
-      // Then, unassign the task
-      const unassignButton = page
-        .locator('[data-testid^="unassign-task-"]:visible')
-        .first();
+      await assignTask(uid, userId);
+
+      page.goto("/");
+
+      const unassignButton = page.locator(
+        `[data-testid="unassign-task-${uid}"]`
+      );
       await unassignButton.click();
       await expect(page.locator('[data-testid="task-list"]')).toContainText(
         "Unassigned"
@@ -136,7 +115,6 @@ test.describe("Task Management System", () => {
     });
 
     test("should show error message when deleting a task fails", async () => {
-      // Mock the API to return an error
       await page.route("**/tasks/*", (route) => {
         route.fulfill({
           status: 400,
@@ -146,13 +124,11 @@ test.describe("Task Management System", () => {
         });
       });
 
-      // Attempt to delete a task
       const deleteButton = page
         .locator('[data-testid^="delete-task-"]:visible')
         .first();
       await deleteButton.click();
 
-      // Check for error message
       await expect(page.locator(".MuiSnackbar-root")).toContainText(
         "Cannot delete an assigned task"
       );

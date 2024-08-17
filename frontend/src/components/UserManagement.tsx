@@ -18,6 +18,7 @@ import {
   Delete as DeleteIcon,
 } from "@mui/icons-material";
 
+
 export const UserManagement: React.FC = () => {
   const [newUser, setNewUser] = useState("");
   const {
@@ -44,17 +45,13 @@ export const UserManagement: React.FC = () => {
     }
   };
 
-  const handleRemoveUser = async (userId: number) => {
-    try {
-      await removeUser(userId);
-
-    } catch (res) {
-
+  const handleRemoveUser = (userId: number) => {
+    removeUser(userId).catch((res) => {
       setSnackBarState({
         open: true,
         message: res.response.data.detail,
       });
-    }
+    });
   };
 
   return (
@@ -76,7 +73,7 @@ export const UserManagement: React.FC = () => {
         onChange={(e) => setNewUser(e.target.value)}
         placeholder="New user name"
         sx={{ mb: 2 }}
-        inputProps={{ 'data-testid': 'new-user-input' }}
+        inputProps={{ "data-testid": "new-user-input" }}
       />
       <Button
         variant="contained"
@@ -84,7 +81,6 @@ export const UserManagement: React.FC = () => {
         onClick={handleAddUser}
         fullWidth
         disabled={isAddingUser}
-
         data-testid="add-user-button"
       >
         {isAddingUser ? <CircularProgress size={24} /> : "Add User"}
@@ -108,7 +104,11 @@ interface UserListProps {
   isRemovingUser: boolean;
 }
 
-const UserList: React.FC<UserListProps> = ({ users, onRemoveUser, isRemovingUser }) => (
+const UserList: React.FC<UserListProps> = ({
+  users,
+  onRemoveUser,
+  isRemovingUser,
+}) => (
   <List data-testid="user-list">
     {users.map((user) => (
       <UserItem
@@ -127,7 +127,11 @@ interface UserItemProps {
   isRemovingUser: boolean;
 }
 
-const UserItem: React.FC<UserItemProps> = ({ user, onRemoveUser, isRemovingUser }) => (
+const UserItem: React.FC<UserItemProps> = ({
+  user,
+  onRemoveUser,
+  isRemovingUser,
+}) => (
   <ListItem data-testid={`user-item-${user.id}`}>
     <ListItemText primary={user.name} />
     <ListItemSecondaryAction>

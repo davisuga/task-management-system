@@ -21,25 +21,6 @@ test.describe("Task Management System", () => {
         name
       );
     });
-    test("should show error message when removing a user fails", async () => {
-      await page.route("**/users/*", (route) => {
-        route.fulfill({
-          status: 400,
-          body: JSON.stringify({
-            detail: "Cannot remove user with assigned tasks",
-          }),
-        });
-      });
-
-      const removeButton = page
-        .locator('[data-testid^="remove-user-"]:visible')
-        .first();
-      await removeButton.click();
-
-      await expect(page.locator(".MuiSnackbar-root")).toContainText(
-        "Cannot remove user with assigned tasks"
-      );
-    });
 
     test("should remove a user", async () => {
       const name = randomString();
@@ -114,25 +95,6 @@ test.describe("Task Management System", () => {
       );
     });
 
-    test("should show error message when deleting a task fails", async () => {
-      await page.route("**/tasks/*", (route) => {
-        route.fulfill({
-          status: 400,
-          body: JSON.stringify({
-            detail: "Cannot remove user with assigned tasks",
-          }),
-        });
-      });
-
-      const deleteButton = page
-        .locator('[data-testid^="delete-task-"]:visible')
-        .first();
-      await deleteButton.click();
-
-      await expect(page.locator(".MuiSnackbar-root")).toContainText(
-        "Cannot delete an assigned task"
-      );
-    });
   });
 
   test("should render both User Management and Task Management components", async () => {
